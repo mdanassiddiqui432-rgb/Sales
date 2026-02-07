@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Sales Cloud Tracker</title>
+    <title>Enterprise Sales - Secure Cloud</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
@@ -12,6 +12,9 @@
             --text: #1e293b; --border: #e2e8f0; --danger: #ef4444;
             --header-yellow: #ffff00;
         }
+        /* Hide app until authenticated */
+        #mainApp { display: none; }
+        
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; }
         header { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; gap: 20px; }
         .search-box { flex-grow: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; max-width: 400px; }
@@ -26,67 +29,68 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .field { display: flex; flex-direction: column; gap: 4px; }
         input, select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
-        .actions { display: flex; gap: 5px; }
     </style>
 </head>
-<body>
+<body onload="checkAccess()">
 
-<header>
-    <h2 style="margin:0">🚀 Sales Cloud</h2>
-    <input type="text" id="searchInput" class="search-box" placeholder="Search by Customer or Entity..." oninput="renderTable()">
-    <button class="btn btn-p" onclick="openModal()">+ Add New Record</button>
-</header>
+<div id="mainApp">
+    <header>
+        <h2 style="margin:0">🔒 Secure Sales Cloud</h2>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search Customer..." oninput="renderTable()">
+        <button class="btn btn-p" onclick="openModal()">+ Add New Record</button>
+    </header>
 
-<div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Entity</th><th>Customer Name</th><th>Service Location</th><th>Connectivity Type</th>
-                <th>Service Del Status</th><th>No of Months</th><th>No. of devices</th><th>Speed (in Mbps)</th>
-                <th>Price</th><th>Exclusive GST</th><th>Inclusive GST</th><th>Payment Status</th>
-                <th>Payment Date</th><th>Start Date</th><th>End Date</th>
-                <th style="background:#dbeafe">PO Expiry</th><th style="background:#fee2e2">Srv Stop</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
-</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Entity</th><th>Customer Name</th><th>Service Location</th><th>Connectivity Type</th>
+                    <th>Service Del Status</th><th>No of Months</th><th>No. of devices</th><th>Speed (Mbps)</th>
+                    <th>Price</th><th>Excl. GST</th><th>Incl. GST</th><th>Payment Status</th>
+                    <th>Payment Date</th><th>Start Date</th><th>End Date</th>
+                    <th style="background:#dbeafe">PO Expiry</th><th style="background:#fee2e2">Srv Stop</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
 
-<div class="modal" id="entryModal">
-    <div class="modal-content">
-        <h3 id="modalTitle">New Entry</h3>
-        <form id="salesForm">
-            <input type="hidden" id="editKey">
-            <div class="grid">
-                <div class="field"><label>Entity</label><input type="text" id="entity" required></div>
-                <div class="field"><label>Customer Name</label><input type="text" id="customerName" required></div>
-                <div class="field"><label>Service Location</label><input type="text" id="location"></div>
-                <div class="field"><label>Connectivity Type</label><input type="text" id="connType"></div>
-                <div class="field"><label>Service Del Status</label><select id="delStatus"><option>Active</option><option>Pending</option><option>Stopped</option></select></div>
-                <div class="field"><label>No of Months</label><input type="number" id="months"></div>
-                <div class="field"><label>No. of devices</label><input type="number" id="devices"></div>
-                <div class="field"><label>Speed (in Mbps)</label><input type="number" id="speed"></div>
-                <div class="field"><label>Price</label><input type="number" id="price"></div>
-                <div class="field"><label>Exclusive GST</label><input type="number" id="exclGst"></div>
-                <div class="field"><label>Inclusive GST</label><input type="number" id="inclGst"></div>
-                <div class="field"><label>Payment Status</label><select id="payStatus"><option>Paid</option><option>Unpaid</option><option>Overdue</option></select></div>
-                <div class="field"><label>Payment Date</label><input type="date" id="payDate"></div>
-                <div class="field"><label>Start Date</label><input type="date" id="startDate"></div>
-                <div class="field"><label>End Date</label><input type="date" id="endDate"></div>
-                <div class="field"><label>PO Expiry Date</label><input type="date" id="poExpiry"></div>
-                <div class="field"><label>Service Stop Date</label><input type="date" id="stopDate"></div>
-            </div>
-            <div style="margin-top:20px; text-align:right;">
-                <button type="button" class="btn" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-p">Save to Cloud</button>
-            </div>
-        </form>
+    <div class="modal" id="entryModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">New Entry</h3>
+            <form id="salesForm">
+                <input type="hidden" id="editKey">
+                <div class="grid">
+                    <div class="field"><label>Entity</label><input type="text" id="entity" required></div>
+                    <div class="field"><label>Customer Name</label><input type="text" id="customerName" required></div>
+                    <div class="field"><label>Service Location</label><input type="text" id="location"></div>
+                    <div class="field"><label>Connectivity Type</label><input type="text" id="connType"></div>
+                    <div class="field"><label>Service Del Status</label><select id="delStatus"><option>Active</option><option>Pending</option><option>Stopped</option></select></div>
+                    <div class="field"><label>No of Months</label><input type="number" id="months"></div>
+                    <div class="field"><label>No. of devices</label><input type="number" id="devices"></div>
+                    <div class="field"><label>Speed (in Mbps)</label><input type="number" id="speed"></div>
+                    <div class="field"><label>Price</label><input type="number" id="price"></div>
+                    <div class="field"><label>Exclusive GST</label><input type="number" id="exclGst"></div>
+                    <div class="field"><label>Inclusive GST</label><input type="number" id="inclGst"></div>
+                    <div class="field"><label>Payment Status</label><select id="payStatus"><option>Paid</option><option>Unpaid</option></select></div>
+                    <div class="field"><label>Payment Date</label><input type="date" id="payDate"></div>
+                    <div class="field"><label>Start Date</label><input type="date" id="startDate"></div>
+                    <div class="field"><label>End Date</label><input type="date" id="endDate"></div>
+                    <div class="field"><label>PO Expiry Date</label><input type="date" id="poExpiry"></div>
+                    <div class="field"><label>Service Stop Date</label><input type="date" id="stopDate"></div>
+                </div>
+                <div style="margin-top:20px; text-align:right;">
+                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-p">Save to Cloud</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- YOUR ACTUAL FIREBASE CONFIG ---
+    // --- FIREBASE CONFIG (CITED FROM YOUR SETUP) ---
     const firebaseConfig = {
         apiKey: "AIzaSyCBjjIcMl7BAGBWTDi6K16KGrn_eLovo4U",
         authDomain: "sales-tracker-7c8a7.firebaseapp.com",
@@ -94,84 +98,76 @@
         projectId: "sales-tracker-7c8a7",
         storageBucket: "sales-tracker-7c8a7.firebasestorage.app",
         messagingSenderId: "530367237650",
-        appId: "1:530367237650:web:d50006e94c80acd401d2cb",
-        measurementId: "G-YE64V5DEQQ"
+        appId: "1:530367237650:web:d50006e94c80acd401d2cb"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let allData = {};
 
+    // --- SECURITY GATE ---
+    const SECRET_KEY = "1234"; // <--- CHANGE YOUR PASSWORD HERE
+
+    function checkAccess() {
+        const pass = prompt("Enter Admin Password:");
+        if (pass === SECRET_KEY) {
+            document.getElementById('mainApp').style.display = 'block';
+            startApp();
+        } else {
+            alert("Wrong password!");
+            window.location.reload();
+        }
+    }
+
     // --- APP LOGIC ---
+    function startApp() {
+        db.ref('sales').on('value', (snap) => {
+            allData = snap.val() || {};
+            renderTable();
+        });
+    }
+
     const modal = document.getElementById('entryModal');
     const form = document.getElementById('salesForm');
 
     function openModal() { modal.style.display = 'flex'; }
-    function closeModal() { modal.style.display = 'none'; form.reset(); document.getElementById('editKey').value = ''; document.getElementById('modalTitle').innerText = "New Entry"; }
+    function closeModal() { modal.style.display = 'none'; form.reset(); document.getElementById('editKey').value = ''; }
 
     form.onsubmit = (e) => {
         e.preventDefault();
         const key = document.getElementById('editKey').value;
-        const data = {
-            entity: document.getElementById('entity').value, customerName: document.getElementById('customerName').value,
-            location: document.getElementById('location').value, connType: document.getElementById('connType').value,
-            delStatus: document.getElementById('delStatus').value, months: document.getElementById('months').value,
-            devices: document.getElementById('devices').value, speed: document.getElementById('speed').value,
-            price: document.getElementById('price').value, exclGst: document.getElementById('exclGst').value,
-            inclGst: document.getElementById('inclGst').value, payStatus: document.getElementById('payStatus').value,
-            payDate: document.getElementById('payDate').value, startDate: document.getElementById('startDate').value,
-            endDate: document.getElementById('endDate').value, poExpiry: document.getElementById('poExpiry').value,
-            stopDate: document.getElementById('stopDate').value
-        };
+        const data = {};
+        const fields = ['entity', 'customerName', 'location', 'connType', 'delStatus', 'months', 'devices', 'speed', 'price', 'exclGst', 'inclGst', 'payStatus', 'payDate', 'startDate', 'endDate', 'poExpiry', 'stopDate'];
+        fields.forEach(f => data[f] = document.getElementById(f).value);
+        
         if(key) db.ref('sales/'+key).update(data); else db.ref('sales').push(data);
         closeModal();
     };
 
-    db.ref('sales').on('value', (snap) => {
-        allData = snap.val() || {};
-        renderTable();
-    });
-
     function renderTable() {
         const tbody = document.getElementById('tableBody');
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const search = document.getElementById('searchInput').value.toLowerCase();
         tbody.innerHTML = '';
-        
         for(let key in allData) {
-            const item = allData[key];
-            if(item.customerName.toLowerCase().includes(searchTerm) || item.entity.toLowerCase().includes(searchTerm)) {
+            const i = allData[key];
+            if(i.customerName.toLowerCase().includes(search)) {
                 tbody.innerHTML += `<tr>
-                    <td><b>${item.entity}</b></td><td>${item.customerName}</td><td>${item.location}</td><td>${item.connType}</td>
-                    <td>${item.delStatus}</td><td>${item.months}</td><td>${item.devices}</td><td>${item.speed}</td>
-                    <td>${item.price}</td><td>${item.exclGst}</td><td>${item.inclGst}</td><td>${item.payStatus}</td>
-                    <td>${item.payDate}</td><td>${item.startDate}</td><td>${item.endDate}</td>
-                    <td style="color:#2563eb"><b>${item.poExpiry}</b></td><td style="color:#ef4444"><b>${item.stopDate}</b></td>
-                    <td class="actions"><button onclick="edit('${key}')">✏️</button> <button onclick="del('${key}')">🗑️</button></td>
+                    <td><b>${i.entity}</b></td><td>${i.customerName}</td><td>${i.location}</td><td>${i.connType}</td>
+                    <td>${i.delStatus}</td><td>${i.months}</td><td>${i.devices}</td><td>${i.speed}</td>
+                    <td>${i.price}</td><td>${i.exclGst}</td><td>${i.inclGst}</td><td>${i.payStatus}</td>
+                    <td>${i.payDate}</td><td>${i.startDate}</td><td>${i.endDate}</td>
+                    <td style="color:#2563eb"><b>${i.poExpiry}</b></td><td style="color:#ef4444"><b>${i.stopDate}</b></td>
+                    <td><button onclick="edit('${key}')">✏️</button> <button onclick="del('${key}')">🗑️</button></td>
                 </tr>`;
             }
         }
     }
 
     window.edit = (key) => {
-        const item = allData[key];
+        const i = allData[key];
         document.getElementById('editKey').value = key;
-        document.getElementById('entity').value = item.entity;
-        document.getElementById('customerName').value = item.customerName;
-        document.getElementById('location').value = item.location;
-        document.getElementById('connType').value = item.connType;
-        document.getElementById('delStatus').value = item.delStatus;
-        document.getElementById('months').value = item.months;
-        document.getElementById('devices').value = item.devices;
-        document.getElementById('speed').value = item.speed;
-        document.getElementById('price').value = item.price;
-        document.getElementById('exclGst').value = item.exclGst;
-        document.getElementById('inclGst').value = item.inclGst;
-        document.getElementById('payStatus').value = item.payStatus;
-        document.getElementById('payDate').value = item.payDate;
-        document.getElementById('startDate').value = item.startDate;
-        document.getElementById('endDate').value = item.endDate;
-        document.getElementById('poExpiry').value = item.poExpiry;
-        document.getElementById('stopDate').value = item.stopDate;
+        const fields = ['entity', 'customerName', 'location', 'connType', 'delStatus', 'months', 'devices', 'speed', 'price', 'exclGst', 'inclGst', 'payStatus', 'payDate', 'startDate', 'endDate', 'poExpiry', 'stopDate'];
+        fields.forEach(f => document.getElementById(f).value = i[f] || '');
         document.getElementById('modalTitle').innerText = "Edit Record";
         openModal();
     };
