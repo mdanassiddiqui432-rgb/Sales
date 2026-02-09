@@ -1,232 +1,229 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Sales - Secure Cloud</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --primary: #2563eb; 
-            --bg: #f1f5f9; 
-            --surface: #ffffff;
-            --text: #334155; 
-            --border: #cbd5e1;
-            --header-bg: #f8fafc; /* Professional light grey */
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
+import { Plus, Trash2, LogOut } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+/*
+ENTERPRISE PRIVATE CRM VERSION
+
+✅ Private Login (Supabase Auth - Email Login)
+✅ Cloud Database (Shared across company users)
+✅ 50 Day Expiry Notification
+✅ Inline Excel Style Entry
+
+⚠️ IMPORTANT:
+Replace below with your Supabase project keys
+*/
+
+const supabaseUrl = "https://sgdceuczipawqrxtafec.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnZGNldWN6aXBhd3FyeHRhZmVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MjY2MTEsImV4cCI6MjA4NjIwMjYxMX0.9lwe5oSmOlX-Nvl7lhfTY__FBSj7wVH8KbM5TLQOHCQ";
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default function SalesTrackerCRM() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [deals, setDeals] = useState([]);
+
+  const [newDeal, setNewDeal] = useState({
+    entity: "",
+    customerName: "",
+    customerPO: "",
+    poDate: "",
+    startDate: "",
+    validity: "",
+    renewalStatus: "",
+    supplyService: "",
+    description: "",
+    location: "",
+    valueExcl: "",
+    valueIncl: "",
+    remarks: "",
+  });
+
+  /* ================= AUTH ================= */
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const signIn = async () => {
+    await supabase.auth.signInWithPassword({ email, password });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  /* ================= DATA LOAD ================= */
+
+  const loadDeals = async () => {
+    const { data } = await supabase.from("proposals").select("*").order("id", { ascending: false });
+    if (data) setDeals(data);
+  };
+
+  useEffect(() => {
+    if (session) loadDeals();
+  }, [session]);
+
+  /* ================= NOTIFICATION ================= */
+
+  useEffect(() => {
+    if ("Notification" in window) Notification.requestPermission();
+  }, []);
+
+  useEffect(() => {
+    const today = new Date();
+
+    deals.forEach((deal) => {
+      if (!deal.validity) return;
+
+      const expiryDate = new Date(deal.validity);
+      const diffDays = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 50 && diffDays >= 0 && !deal.notified) {
+        if (Notification.permission === "granted") {
+          new Notification("Proposal Expiry Alert", {
+            body: `${deal.customername} expires in ${diffDays} days`,
+          });
         }
-        #mainApp { display: none; }
-        
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; }
-        
-        header { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 12px 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px; }
-        
-        .search-box { flex-grow: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; max-width: 350px; font-size: 14px; }
-        
-        .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
-        .btn-p { background: var(--primary); color: white; }
-        .btn-p:hover { background: #1d4ed8; }
+      }
+    });
+  }, [deals]);
 
-        .table-container { background: var(--surface); border-radius: 8px; overflow: auto; flex-grow: 1; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        
-        table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
-        
-        /* CLEAN HEADER STYLE */
-        th { 
-            background: var(--header-bg); 
-            color: #475569; 
-            padding: 12px; 
-            text-align: left; 
-            border-bottom: 2px solid var(--border);
-            border-right: 1px solid var(--border);
-            position: sticky; 
-            top: 0; 
-            z-index: 5; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px;
-            font-weight: 700;
-        }
+  /* ================= CRUD ================= */
 
-        td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; }
-        tr:hover { background-color: #f8fafc; }
+  const addDeal = async () => {
+    if (!newDeal.customerName) return;
 
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-        .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #64748b; }
-        input, select { padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; color: #1e293b; }
-        input:focus { outline: 2px solid #93c5fd; border-color: var(--primary); }
-    </style>
-</head>
-<body onload="checkAccess()">
+    await supabase.from("proposals").insert([
+      {
+        ...newDeal,
+      },
+    ]);
 
-<div id="mainApp">
-    <header>
-        <h3 style="margin:0; color: #1e293b;">📊 Sales Tracker Cloud</h3>
-        <input type="text" id="searchInput" class="search-box" placeholder="Search by Customer Name..." oninput="renderTable()">
-        <button class="btn btn-p" onclick="openModal()">+ Add New Entry</button>
-    </header>
+    setNewDeal({
+      entity: "",
+      customerName: "",
+      customerPO: "",
+      poDate: "",
+      startDate: "",
+      validity: "",
+      renewalStatus: "",
+      supplyService: "",
+      description: "",
+      location: "",
+      valueExcl: "",
+      valueIncl: "",
+      remarks: "",
+    });
 
-    <div class="table-container">
-        <table>
+    loadDeals();
+  };
+
+  const deleteDeal = async (id) => {
+    await supabase.from("proposals").delete().eq("id", id);
+    loadDeals();
+  };
+
+  /* ================= LOGIN SCREEN ================= */
+
+  if (!session) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle>Company Private CRM Login</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Button onClick={signIn}>Login</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  /* ================= MAIN CRM ================= */
+
+  return (
+    <div className="p-6 grid gap-6">
+      <div className="flex justify-between items-center">
+        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-2xl font-bold">
+          Private Sales Proposal Tracker
+        </motion.h1>
+        <Button variant="outline" onClick={signOut} className="flex gap-2">
+          <LogOut size={16} /> Logout
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Proposal (Inline)</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {Object.keys(newDeal).map((field) => (
+              <Input
+                key={field}
+                placeholder={field}
+                className="w-40"
+                type={field.toLowerCase().includes("date") || field === "validity" ? "date" : "text"}
+                value={newDeal[field]}
+                onChange={(e) => setNewDeal({ ...newDeal, [field]: e.target.value })}
+              />
+            ))}
+            <Button onClick={addDeal}>
+              <Plus size={16} /> Add
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Proposals</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="min-w-full text-sm">
             <thead>
-                <tr>
-                    <th>Customer Name</th>
-                    <th>Service Location</th>
-                    <th>Connectivity Type</th>
-                    <th>Service Status</th>
-                    <th>No.of Months</th>
-                    <th>Devices</th>
-                    <th>Speed (Mbps)</th>
-                    <th>Price</th>
-                    <th>Pay Status</th>
-                    <th>Pay Date</th>
-                    <th>Service Start Date</th>
-                    <th>End Date</th>
-                    <th>PO Expiry Date</th>
-                    <th>Srvice Stop Date</th>
-                    <th>Srvice Stop Date</th>
-                    <th>Renewal Status</th>  
-                    <th>Services/Supply</th>
-                    <th style="text-align:center">Actions</th>
-                </tr>
+              <tr className="border-b font-semibold text-left">
+                {Object.keys(newDeal).map((key) => (
+                  <th key={key} className="p-2 capitalize">{key}</th>
+                ))}
+                <th className="p-2">Action</th>
+              </tr>
             </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+            <tbody>
+              {deals.map((deal) => (
+                <tr key={deal.id} className="border-b">
+                  {Object.keys(newDeal).map((key) => (
+                    <td key={key} className="p-2">{deal[key.toLowerCase()] || deal[key]}</td>
+                  ))}
+                  <td className="p-2">
+                    <Button size="sm" variant="destructive" onClick={() => deleteDeal(deal.id)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
-
-    <div class="modal" id="entryModal">
-        <div class="modal-content">
-            <h3 id="modalTitle" style="margin-top:0">Entry Details</h3>
-            <form id="salesForm">
-                <input type="hidden" id="editKey">
-                <div class="grid">
-                    <div class="field"><label>Entity</label><input type="text" id="entity" required></div>
-                    <div class="field"><label>Customer Name</label><input type="text" id="customerName" required></div>
-                    <div class="field"><label>Service Location</label><input type="text" id="location"></div>
-                    <div class="field"><label>Connectivity Type</label><input type="text" id="connType"></div>
-                    <div class="field"><label>Service Del Status</label><select id="delStatus"><option>Active</option><option>Pending</option><option>Stopped</option></select></div>
-                    <div class="field"><label>No of Months</label><input type="number" id="months"></div>
-                    <div class="field"><label>No. of devices</label><input type="number" id="devices"></div>
-                    <div class="field"><label>Speed (in Mbps)</label><input type="number" id="speed"></div>
-                    <div class="field"><label>Price</label><input type="number" id="price"></div>
-                    <div class="field"><label>Exclusive GST</label><input type="number" id="exclGst"></div>
-                    <div class="field"><label>Inclusive GST</label><input type="number" id="inclGst"></div>
-                    <div class="field"><label>Payment Status</label><select id="payStatus"><option>Paid</option><option>Unpaid</option></select></div>
-                    <div class="field"><label>Payment Date</label><input type="date" id="payDate"></div>
-                    <div class="field"><label>Start Date</label><input type="date" id="startDate"></div>
-                    <div class="field"><label>End Date</label><input type="date" id="endDate"></div>
-                    <div class="field"><label>PO Expiry Date</label><input type="date" id="poExpiry"></div>
-                    <div class="field"><label>Service Stop Date</label><input type="date" id="stopDate"></div>
-                </div>
-                <div style="margin-top:20px; text-align:right;">
-                    <button type="button" class="btn" style="background:#e2e8f0" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-p">Save to Cloud</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-    // --- FIREBASE CONFIG ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyCBjjIcMl7BAGBWTDi6K16KGrn_eLovo4U",
-        authDomain: "sales-tracker-7c8a7.firebaseapp.com",
-        databaseURL: "https://sales-tracker-7c8a7-default-rtdb.firebaseio.com",
-        projectId: "sales-tracker-7c8a7",
-        storageBucket: "sales-tracker-7c8a7.firebasestorage.app",
-        messagingSenderId: "530367237650",
-        appId: "1:530367237650:web:d50006e94c80acd401d2cb"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let allData = {};
-
-    // --- SECURITY ---
-    const SECRET_KEY = "1234"; 
-
-    function checkAccess() {
-        const pass = prompt("Enter Admin Password:");
-        if (pass === SECRET_KEY) {
-            document.getElementById('mainApp').style.display = 'block';
-            startApp();
-        } else {
-            alert("Wrong password!");
-            window.location.reload();
-        }
-    }
-
-    function startApp() {
-        db.ref('sales').on('value', (snap) => {
-            allData = snap.val() || {};
-            renderTable();
-        });
-    }
-
-    const modal = document.getElementById('entryModal');
-    const form = document.getElementById('salesForm');
-
-    function openModal() { modal.style.display = 'flex'; }
-    function closeModal() { modal.style.display = 'none'; form.reset(); document.getElementById('editKey').value = ''; }
-
-    form.onsubmit = (e) => {
-        e.preventDefault();
-        const key = document.getElementById('editKey').value;
-        const data = {};
-        const fields = ['entity', 'customerName', 'location', 'connType', 'delStatus', 'months', 'devices', 'speed', 'price', 'exclGst', 'inclGst', 'payStatus', 'payDate', 'startDate', 'endDate', 'poExpiry', 'stopDate'];
-        fields.forEach(f => data[f] = document.getElementById(f).value);
-        
-        if(key) db.ref('sales/'+key).update(data); else db.ref('sales').push(data);
-        closeModal();
-    };
-
-    function renderTable() {
-        const tbody = document.getElementById('tableBody');
-        const search = document.getElementById('searchInput').value.toLowerCase();
-        tbody.innerHTML = '';
-        for(let key in allData) {
-            const i = allData[key];
-            if(i.customerName.toLowerCase().includes(search)) {
-                tbody.innerHTML += `<tr>
-                    <td><b>${i.entity}</b></td>
-                    <td>${i.customerName}</td>
-                    <td>${i.location}</td>
-                    <td>${i.connType}</td>
-                    <td>${i.delStatus}</td>
-                    <td>${i.months}</td>
-                    <td>${i.devices}</td>
-                    <td>${i.speed}</td>
-                    <td>${i.price}</td>
-                    <td>${i.exclGst}</td>
-                    <td>${i.inclGst}</td>
-                    <td>${i.payStatus}</td>
-                    <td>${i.payDate}</td>
-                    <td>${i.startDate}</td>
-                    <td>${i.endDate}</td>
-                    <td>${i.poExpiry}</td>
-                    <td>${i.stopDate}</td>
-                    <td style="text-align:center">
-                        <button style="border:none; background:none; cursor:pointer" onclick="edit('${key}')">✏️</button> 
-                        <button style="border:none; background:none; cursor:pointer" onclick="del('${key}')">🗑️</button>
-                    </td>
-                </tr>`;
-            }
-        }
-    }
-
-    window.edit = (key) => {
-        const i = allData[key];
-        document.getElementById('editKey').value = key;
-        const fields = ['entity', 'customerName', 'location', 'connType', 'delStatus', 'months', 'devices', 'speed', 'price', 'exclGst', 'inclGst', 'payStatus', 'payDate', 'startDate', 'endDate', 'poExpiry', 'stopDate'];
-        fields.forEach(f => document.getElementById(f).value = i[f] || '');
-        document.getElementById('modalTitle').innerText = "Edit Record";
-        openModal();
-    };
-
-    window.del = (key) => { if(confirm('Delete from Cloud?')) db.ref('sales/'+key).remove(); };
-</script>
-</body>
-</html>
-
+  );
+}
